@@ -4,20 +4,14 @@
   <em>A GitHub Action that keeps a coverage badge up to date in private repositories, with no third-party service.</em>
 </p>
 
-<!-- Stack: what the action runs on, then the tools this repository is developed with. -->
+<!-- What the action is: its Marketplace listing, the latest release, and the Python it needs. -->
 <p align="center">
-  <img src="https://img.shields.io/badge/GitHub%20Action-composite-2088FF.svg?logo=githubactions&logoColor=white" alt="GitHub Action: composite">
+  <a href="https://github.com/marketplace/actions/coverage-badge-for-private-repos"><img src="https://img.shields.io/badge/GitHub%20Action-composite-2088FF.svg?logo=githubactions&logoColor=white" alt="GitHub Action: composite"></a>
+  <a href="https://github.com/marketplace/actions/coverage-badge-for-private-repos"><img src="https://img.shields.io/github/v/release/adanmauri/coverage-badges?logo=github&logoColor=white&label=release" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg?logo=python&logoColor=white" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/Bash-4EAA25.svg?logo=gnubash&logoColor=white" alt="Bash">
-  <img src="https://img.shields.io/badge/Git-F05032.svg?logo=git&logoColor=white" alt="Git">
-  <img src="https://img.shields.io/badge/runtime%20dependencies-none-brightgreen.svg" alt="Runtime dependencies: none">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-  <br>
-  <a href="https://github.com/astral-sh/uv"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json" alt="uv"></a>
-  <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff"></a>
-  <a href="https://github.com/psf/black"><img src="https://img.shields.io/badge/code%20style-black-000000.svg" alt="Code style: black"></a>
-  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white" alt="pre-commit"></a>
 </p>
+
+---
 
 <!-- Quality: the workflows on main, and this repository's own coverage badge, published by the action. -->
 <p align="center">
@@ -29,6 +23,8 @@
   <a href="https://github.com/adanmauri/coverage-badges/actions/workflows/dependabot/dependabot-updates"><img src="https://github.com/adanmauri/coverage-badges/actions/workflows/dependabot/dependabot-updates/badge.svg" alt="Dependabot Updates"></a>
   <a href="https://github.com/adanmauri/coverage-badges/actions/workflows/todo-to-issue.yaml"><img src="https://github.com/adanmauri/coverage-badges/actions/workflows/todo-to-issue.yaml/badge.svg?branch=main" alt="TODO to Issue"></a>
 </p>
+
+---
 
 ## Table of Contents
 
@@ -87,6 +83,9 @@ Then add the badge to your README. The job summary prints the snippet for your r
 
 The badge is published only from the default branch. On pull requests and other branches the action
 still reads the report and sets the `coverage` output, so you can use it in later steps.
+
+`@v1` follows every `v1.x.y` release. To never get a change you did not choose, pin `@v1.0.0`:
+releases here are immutable, so that tag always points at the same code.
 
 ## Modes
 
@@ -147,7 +146,9 @@ as 99.9% and never rounded up to 100%.
   not modified.
 - Skips the commit when the badge did not change, and retries when a concurrent run pushed first.
 - Commits are authored by `github-actions[bot]` and marked `[skip ci]`.
-- Pushes with the credentials of `actions/checkout`, so the job needs `permissions: contents: write`.
+- Pushes with the credentials of `actions/checkout`, so the job needs `permissions: contents: write`,
+  and a branch protection rule or ruleset must let `github-actions[bot]` push to the target branch:
+  `badges` in `branch` mode, the default branch in `commit` mode.
 
 Badge colors follow the coverage percentage: red below 40%, yellow from 40%, yellow-green from 60%
 and green from 80%.
