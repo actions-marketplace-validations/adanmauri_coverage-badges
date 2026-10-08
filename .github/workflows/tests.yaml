@@ -9,80 +9,97 @@ on:
     branches:
       - main
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # Pull requests that change none of the files the tests depend on skip them; main always runs
+    # them, and publishes the badge (docs/adr/0008). The filter lives in a job, not in `paths:`,
+    # because `test` is a required check: a job skipped by its condition reports success, while a
+    # workflow that never starts leaves the check pending and blocks the merge.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Decide whether the tests run
+        id: diff
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          TESTED_FILES: >-
+            ^(action\.yml|scripts/|src/|tests/|pyproject\.toml|uv\.lock|\.python-version|\.github/workflows/tests\.yaml)
+        run: |
+          run=true
+          if [ "$EVENT_NAME" = pull_request ] &&
+            ! git diff --name-only "origin/$BASE_REF...HEAD" | grep -qE "$TESTED_FILES"; then
+            run=false
+          fi
+          echo "Run the tests: $run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      pull-requests: write
       contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
+      # The credentials stay: the badge step pushes with them on main.
+      - name: Checkout code # zizmor: ignore[artipacked]
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          python-version: "3.14"
-
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: .pip-cache
-          key: ${{ runner.os }}-pip-${{ hashFiles('Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install pipenv
-        env:
-          PIP_CACHE_DIR: .pip-cache
-        run: |
-          pip install --upgrade pip pipenv --root-user-action=ignore --cache-dir="$PIP_CACHE_DIR"
+          enable-cache: true
 
       - name: Install dependencies
-        env:
-          PIP_CACHE_DIR: .pip-cache
-        run: |
-          pipenv install --system --dev --deploy
+        run: uv sync --locked --no-default-groups --group test
 
       - name: Run tests with coverage
-        run: |
-          pipenv run pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing --cov-report=json -v
+        run: uv run --no-sync pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing -v
 
-      - name: Extract coverage percentage
-        id: coverage
-        run: |
-          COVERAGE=$(python -c "import json; data = json.load(open('coverage.json')); print(f\"{data['totals']['percent_covered']:.2f}\")")
-          ROUNDED=$(python -c "coverage = float('$COVERAGE'); rounded = round(coverage / 5) * 5; rounded = int(min(100, max(0, rounded))); print(rounded)")
-          echo "coverage=$COVERAGE" >> "$GITHUB_OUTPUT"
-          echo "rounded=$ROUNDED" >> "$GITHUB_OUTPUT"
-          echo "Coverage: $COVERAGE% (rounded to $ROUNDED% for badge)"
+      - name: Publish coverage badge
+        uses: ./
+        with:
+          report: coverage.xml
 
-      - name: Update README with coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          ROUNDED=${{ steps.coverage.outputs.rounded }}
-          sed -i "s|coverage-100\.svg|coverage-${ROUNDED}.svg|g" README.md
-          echo "Updated README to use coverage-${ROUNDED}.svg"
+  action-compatibility:
+    # Runs the badge generator with the runner's system Python (3.10 on Ubuntu 22.04),
+    # the oldest interpreter the action supports, without installing anything.
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
 
-      - name: Commit and push README with updated coverage badge
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Generate a badge from every fixture format
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git status
-          git add README.md
-          if git diff --staged --quiet; then
-            echo "No changes to commit. README is already up to date."
-          else
-            git commit -m "Update coverage badge to ${{ steps.coverage.outputs.coverage }}% (rounded to ${{ steps.coverage.outputs.rounded }}%)"
-            git push
-          fi
+          python3 --version
+          for report in tests/fixtures/*; do
+            coverage=$(python3 -m src.generate_badge --report "$report" --output "$RUNNER_TEMP/badge.svg")
+            echo "$report: $coverage%"
+            test "$coverage" = "75.0"
+          done

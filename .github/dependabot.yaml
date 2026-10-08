@@ -1,13 +1,23 @@
 ---
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "monthly"
+    # Releases at least two weeks old, as for the pre-commit revs.
+    cooldown:
+      default-days: 14
     open-pull-requests-limit: 10
+
+  # Actions are pinned to a commit; Dependabot moves the SHA and its version comment together.
+  # A MegaLinter bump also needs the hook versions in .pre-commit-config.yaml updated by hand
+  # (docs/DEVELOPMENT.md).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14

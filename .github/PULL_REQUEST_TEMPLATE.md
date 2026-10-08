@@ -1,31 +1,19 @@
-# What's this PR do?
-
-_Summary of changes in this PR or what it accomplishes._
-
+<!-- markdownlint-disable-file MD041 -->
 <!--
-Please title your PR as follows: `feature: fix foo bar`.
-Always start with the thing you are fixing, then describe the fix.
-Don't use past tense (e.g. "fixed foo bar").
+Title: Conventional Commits, e.g. `feat(parser): read Clover reports`.
+Link the issue in the summary: "Closes #123".
+-->
 
-Explain what your PR does and why.
+## Summary
 
-If you are adding a new function, please document it and add tests:
+<!-- What changes and why. Impact on action users first: new input, changed output, changed badge
+URL. -->
 
-```python
-code you added/updated
-```
+## Test plan
 
-If you are fixing a bug, please add a test that covers it.
+<!-- How it was tested, with the result. Only what was actually run: `make check`; for publishing
+or badge URL changes, the private-repository run in AGENTS.md. -->
 
-Before submitting a PR, please:
-  - specify the command to execute or steps to follow to know that
-    the problem was solved
+## Breaking change
 
-We try to process PRs as soon as possible. They should be handled within
-24 hours.
-
-Applying labels to PRs is not needed.
-
-Thanks a lot for your contribution!
-
-->
+<!-- What breaks for users pinned to @v1 and how to update. Delete this section if nothing breaks. -->
